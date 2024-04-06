@@ -1,10 +1,9 @@
 'use client'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { dataTagSymbol, useQuery } from "@tanstack/react-query";
 import { ChevronDown, Filter } from "lucide-react";
-import Image from "next/image";
-import { Suspense, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from 'axios'
 import { QueryResult } from "@upstash/vector";
 import type { Product as TProduct } from "@/db";
@@ -12,7 +11,6 @@ import Product from "@/components/Products/Product";
 import ProductSkeleton from "@/components/Products/ProductSkeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ProductState } from "@/lib/validators/product-validator";
-import { never } from "zod";
 import { Slider } from "@/components/ui/slider";
 
 const SORT_OPTIONS = [
@@ -67,7 +65,6 @@ const PRICE_FILTERS ={
 
 const DEFAULT_CUSTOM_PRICE =[0,100] as [number, number]
 export default function Home() {
-  
   const [filter,setFilter]=useState<ProductState>({
     sort:"none",
     price:{isCustom:false,range:DEFAULT_CUSTOM_PRICE},
@@ -75,8 +72,8 @@ export default function Home() {
     size:["L","M","S"]
   })
 
-  console.log(filter)
-  const {data:products}= useQuery({
+  // console.log(filter)
+  const {data:products,refetch}= useQuery({
     queryKey:["products"],
     queryFn:async()=>{
       const {data}= await axios.post<QueryResult<TProduct>[]>(
@@ -85,7 +82,7 @@ export default function Home() {
           filter:{
             sort:filter.sort,
             color:filter.color,
-            price:filter.price,
+            price:filter.price.range,
             size:filter.size
           }
         }
@@ -93,8 +90,12 @@ export default function Home() {
       return data
     }
   })
+  console.log(products)
+  const onSubmit=()=>refetch()
 
-
+  useEffect(()=>{
+    onSubmit()
+  },[filter])
 
   const applyArrayFilter = ({catergory , value}:{
     catergory : keyof Omit<typeof filter,"price"| "sort">,
@@ -106,6 +107,8 @@ export default function Home() {
     }else{
       setFilter((prev)=> ({...prev, [catergory]:[...prev[catergory],value]}))
     }
+  
+    
   }
 
   const minPrice =Math.min(filter.price.range[0],filter.price.range[1])
@@ -300,7 +303,7 @@ export default function Home() {
           {/* product grids */}
           <ul  className="lg:col-span-3 grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             {products
-              ? products.map((product)=>(
+              ? products.map((product:any)=>(
                   <Product key={product.metadata?.id} product={product.metadata!} />
                 ))
               :new Array(12).fill(null).map((_,i)=> <ProductSkeleton key={i}/>)

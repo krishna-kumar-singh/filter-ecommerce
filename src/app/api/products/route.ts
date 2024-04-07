@@ -11,7 +11,8 @@ class Filter{
     }
     add(key:string,operator:string,value:string| number){
         const filter = this.filters.get(key)|| [] 
-        filter.push(`$key ${operator} ${typeof value ==='number'? value: `"${value}"`}`)
+        filter.push(`${key} ${operator} ${typeof value ==='number'? value: `"${value}"`}`)
+        this.filters.set(key, filter)
     }
 
     addRaw(key:string, rawFilter:string){
@@ -57,4 +58,3 @@ export const POST=async (request:NextRequest)=>{
         })
     }
 }
-

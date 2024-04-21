@@ -1,4 +1,4 @@
-import { Product } from "@/db"
+import type{ Product } from "@/db"
 
 
 const Product= ({product}:{product:Product})=>{
@@ -14,6 +14,7 @@ const Product= ({product}:{product:Product})=>{
                     Size {product.size.toUpperCase()}, {product.color}
                 </p>
             </div>
+            <p className='text-sm font-medium text-gray-900'>{product.price}€</p>
         </div>
     </div>
   )

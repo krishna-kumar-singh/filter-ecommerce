@@ -3,7 +3,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/compon
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Filter } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from 'axios'
 import { QueryResult } from "@upstash/vector";
 import type { Product as TProduct } from "@/db";
@@ -12,7 +12,8 @@ import ProductSkeleton from "@/components/Products/ProductSkeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ProductState } from "@/lib/validators/product-validator";
 import { Slider } from "@/components/ui/slider";
-
+import debounce from 'lodash.debounce'
+import EmptyState from "@/components/Products/EmptyState";
 const SORT_OPTIONS = [
   {name:"None",value:"none"},
   {name:"Price: Low to High",value:"price-asc"},
@@ -93,10 +94,9 @@ export default function Home() {
   console.log(products)
   const onSubmit=()=>refetch()
 
-  useEffect(()=>{
-    onSubmit()
-  },[filter])
-
+  const debounceSubmit=debounce(onSubmit,400)
+  const _debounceSubmit= useCallback(debounceSubmit,[])
+  
   const applyArrayFilter = ({catergory , value}:{
     catergory : keyof Omit<typeof filter,"price"| "sort">,
     value : string
@@ -131,11 +131,12 @@ export default function Home() {
               {SORT_OPTIONS.map((option)=>(
 
                 <button className={cn('text-left w-full block px-4 py-2 text-sm ', {"text-gray-900 bg-gray-100": option.value===filter.sort, "text-gray-500":option.value !== filter.sort})}  key={option.name} onClick={()=>{
-                setFilter((prev)=>({
-                  ...prev,
-                  sort:option.value
-                }))
-              }}>{option.name}</button>
+                  setFilter((prev)=>({
+                    ...prev,
+                    sort:option.value
+                  } ))
+                  _debounceSubmit()
+                }}>{option.name}</button>
 
               ))}
             </DropdownMenuContent>
@@ -180,8 +181,8 @@ export default function Home() {
                             catergory:'color',
                             value:option.value
                           })
+                          _debounceSubmit()
                         }}
-
                         checked={filter.color.includes(option.value)}
                         id={`color-${optionIdx}`} 
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"/>
@@ -209,6 +210,7 @@ export default function Home() {
                             catergory:'size',
                             value:option.value
                           })
+                          _debounceSubmit()
                         }}
 
                         checked={filter.size.includes(option.value)}
@@ -239,6 +241,7 @@ export default function Home() {
                             ...prev,
                             price :{isCustom:false,range:[...option.value]}
                           }))
+                          _debounceSubmit()
                         }}
 
                         checked={!filter.price.isCustom && filter.price.range[0]===option.value[0] && filter.price.range[1]===option.value[1]}
@@ -257,6 +260,7 @@ export default function Home() {
                             ...prev,
                             price :{isCustom:true,range:[0,100]}
                           }))
+                          _debounceSubmit()
                         }}
 
                         checked={filter.price.isCustom}
@@ -292,6 +296,7 @@ export default function Home() {
                           ...prev,
                           price :{isCustom:true,range:[newMin,newMax]}
                         }))
+                        _debounceSubmit()
                       }}
                       />
                     </li>
@@ -302,8 +307,9 @@ export default function Home() {
           </div>
           {/* product grids */}
           <ul  className="lg:col-span-3 grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {products
-              ? products.map((product:any)=>(
+            {products && products.length ===0  
+            ? <EmptyState/> 
+            :products? products.map((product:any)=>(
                   <Product key={product.metadata?.id} product={product.metadata!} />
                 ))
               :new Array(12).fill(null).map((_,i)=> <ProductSkeleton key={i}/>)
